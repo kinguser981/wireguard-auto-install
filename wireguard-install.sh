@@ -136,53 +136,46 @@ function installQuestions() {
 	fi
 	echo "Automatically detected public IP address: ${SERVER_PUB_IP}"
 
-	# Detect public interface and pre-fill for the user
-	SERVER_NIC="$(ip -4 route ls | grep default | awk '/dev/ {for (i=1; i<=NF; i++) if ($i == "dev") print $(i+1)}' | head -1)"
-	until [[ ${SERVER_PUB_NIC} =~ ^[a-zA-Z0-9_]+$ ]]; do
-  		echo "Automatically detected Public interface: ${SERVER_NIC}"
-	done
+# Detect public interface
+SERVER_NIC="$(ip -4 route ls | grep default | awk '/dev/ {for (i=1; i<=NF; i++) if ($i == "dev") print $(i+1)}' | head -1)"
+SERVER_PUB_NIC="${SERVER_NIC}" # Assign detected NIC to SERVER_PUB_NIC
 
-	until [[ ${SERVER_WG_NIC} =~ ^[a-zA-Z0-9_]+$ && ${#SERVER_WG_NIC} -lt 16 ]]; do
-		read -rp "WireGuard interface name: " -e -i wg0 SERVER_WG_NIC
-	done
+# WireGuard interface name
+SERVER_WG_NIC="wg0"
 
-	until [[ ${SERVER_WG_IPV4} =~ ^([0-9]{1,3}\.){3} ]]; do
-		read -rp "Server WireGuard IPv4: " -e -i 10.66.66.1 SERVER_WG_IPV4
-	done
+# Server WireGuard IPv4 and IPv6
+SERVER_WG_IPV4="10.66.66.1"
+SERVER_WG_IPV6="fd42:42:42::1"
 
-	until [[ ${SERVER_WG_IPV6} =~ ^([a-f0-9]{1,4}:){3,4}: ]]; do
-		read -rp "Server WireGuard IPv6: " -e -i fd42:42:42::1 SERVER_WG_IPV6
-	done
+# Generate random number within private ports range for WireGuard port
+SERVER_PORT=$(shuf -i49152-65535 -n1)
 
-	# Generate random number within private ports range
-	RANDOM_PORT=$(shuf -i49152-65535 -n1)
-	until [[ ${SERVER_PORT} =~ ^[0-9]+$ ]] && [ "${SERVER_PORT}" -ge 1 ] && [ "${SERVER_PORT}" -le 65535 ]; do
-		read -rp "Server WireGuard port [1-65535]: " -e -i "${RANDOM_PORT}" SERVER_PORT
-	done
+# DNS resolvers to use for the clients (Adguard DNS by default)
+CLIENT_DNS_1="8.8.8.8"
+CLIENT_DNS_2="8.4.4.8"
 
-	# Adguard DNS by default
-	until [[ ${CLIENT_DNS_1} =~ ^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$ ]]; do
-		read -rp "First DNS resolver to use for the clients: " -e -i 1.1.1.1 CLIENT_DNS_1
-	done
-	until [[ ${CLIENT_DNS_2} =~ ^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$ ]]; do
-		read -rp "Second DNS resolver to use for the clients (optional): " -e -i 1.0.0.1 CLIENT_DNS_2
-		if [[ ${CLIENT_DNS_2} == "" ]]; then
-			CLIENT_DNS_2="${CLIENT_DNS_1}"
-		fi
-	done
+# Allowed IPs list for generated clients (route everything by default)
+ALLOWED_IPS="0.0.0.0/0,::/0"
 
-	until [[ ${ALLOWED_IPS} =~ ^.+$ ]]; do
-		echo -e "\nWireGuard uses a parameter called AllowedIPs to determine what is routed over the VPN."
-		read -rp "Allowed IPs list for generated clients (leave default to route everything): " -e -i '0.0.0.0/0,::/0' ALLOWED_IPS
-		if [[ ${ALLOWED_IPS} == "" ]]; then
-			ALLOWED_IPS="0.0.0.0/0,::/0"
-		fi
-	done
+echo "All values have been automatically selected:"
+echo "--------------------------------------------"
+echo "Public interface:           ${SERVER_PUB_NIC}"
+echo "WireGuard interface name:   ${SERVER_WG_NIC}"
+echo "Server WireGuard IPv4:      ${SERVER_WG_IPV4}"
+echo "Server WireGuard IPv6:      ${SERVER_WG_IPV6}"
+echo "Server WireGuard port:      ${SERVER_PORT}"
+echo "Client DNS 1:               ${CLIENT_DNS_1}"
+echo "Client DNS 2:               ${CLIENT_DNS_2}"
+echo "Allowed IPs:                ${ALLOWED_IPS}"
+echo "--------------------------------------------"
+echo ""
+echo "Okay, that was all I needed. We are ready to setup your WireGuard server now."
+echo "You will be able to generate a client at the end of the installation."
+echo "Continuing automatically..."
 
-	echo ""
-	echo "Okay, that was all I needed. We are ready to setup your WireGuard server now."
-	echo "You will be able to generate a client at the end of the installation."
-	read -n1 -r -p "Press any key to continue..."
+# In a real script, you would now proceed with the WireGuard setup using these variables.
+# For demonstration purposes, we just exit here.
+# exit 0
 }
 
 function installWireGuard() {
