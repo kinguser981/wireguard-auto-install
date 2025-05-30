@@ -1,0 +1,1 @@
+# wireguard-auto-install
